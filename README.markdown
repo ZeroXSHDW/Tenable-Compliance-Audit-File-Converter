@@ -100,6 +100,6 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
   ```bash
   chmod -R u+rw .
   ```
-
+  
 ## License
-MIT License. See [LICENSE](LICENSE).
+This project is licensed under the Apache 2.0 License. See `LICENSE` file for details.
