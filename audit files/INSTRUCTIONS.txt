@@ -1,0 +1,45 @@
+Instructions for Preparing Tenable Compliance Audit Files
+
+1. Download the Audit Files:
+   - Visit https://www.tenable.com/downloads/download-all-compliance-audit-files
+   - Download the `audits.tar.gz` file to your computer.
+
+2. Place the File:
+   - Move `audits.tar.gz` to the `audit files` folder:
+     ```
+     mv ~/Downloads/audits.tar.gz ~/Documents/Tenable-Compliance-Audit-File-Converter-main/audit\ files/
+     ```
+
+3. Extract the File:
+   - Navigate to the `audit files` folder:
+     ```
+     cd ~/Documents/Tenable-Compliance-Audit-File-Converter-main/audit\ files
+     ```
+   - Extract the archive:
+     ```
+     tar -xzf audits.tar.gz
+     ```
+   - Move the extracted platform folders (e.g., `AS400`, `Cisco`) to `audit files/`:
+     ```
+     mv portal_audits/* .
+     rmdir portal_audits
+     ```
+   - This ensures `.audit` files are in `audit files/<platform>/*.audit` (e.g., `audit files/AS400/ibm_v7_r2_iseries.audit`).
+
+4. Verify:
+   - Check the folder structure:
+     ```
+     ls -l ~/Documents/Tenable-Compliance-Audit-File-Converter-main/audit\ files/*
+     ```
+   - Ensure `.audit` files are directly under platform subfolders (e.g., `audit files/AS400/`).
+
+5. Proceed with Processing:
+   - Run the conversion script as described in `README.md`:
+     ```
+     cd ~/Documents/Tenable-Compliance-Audit-File-Converter-main
+     python execute_all_scripts.py "audit files" "output files" --verbose
+     ```
+
+Note:
+- Ensure `audits.tar.gz` is not corrupted. Re-download if extraction fails.
+- Contact support@tenable.com for issues accessing the download link.
