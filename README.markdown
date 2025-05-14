@@ -1,5 +1,7 @@
 # Tenable Compliance Audit File Converter
 
+![Tenable Compliance Audit File Converter](assets/banner.jpg)
+
 ## Overview
 
 Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://www.tenable.com/downloads/download-all-compliance-audit-files)) into formatted XLSX and HTML documents. The pipeline prioritizes the `description` field, mirrors the input folder structure, and generates a master HTML summary.
