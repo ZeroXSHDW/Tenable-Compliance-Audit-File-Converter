@@ -24,3 +24,4 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
+config_temp.json
