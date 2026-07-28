@@ -34,12 +34,14 @@ Instructions for Preparing Tenable Compliance Audit Files
    - Ensure `.audit` files are directly under platform subfolders (e.g., `audit files/AS400/`).
 
 5. Proceed with Processing:
-   - Run the conversion script as described in `README.md`:
+   - Run the conversion script as described in `README.md`.
+   - Quote directory names that contain spaces:
      ```
      cd ~/Documents/Tenable-Compliance-Audit-File-Converter-main
-     python execute_all_scripts.py "audit files" "output files" --verbose
+     python3 execute_all_scripts.py "audit files" "output files" --verbose
      ```
 
 Note:
+- Always quote `"audit files"` and `"output files"` (or escape spaces) so the shell does not split the paths.
 - Ensure `audits.tar.gz` is not corrupted. Re-download if extraction fails.
 - Contact support@tenable.com for issues accessing the download link.

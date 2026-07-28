@@ -1,11 +1,25 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # install_requirements.sh
-# Installs Python dependencies for the Tenable Compliance Audit File Converter
+# Installs Python dependencies for the Tenable Compliance Audit File Converter.
+# Portable across macOS (BSD) and Linux — no grep -P or bc required.
 
-# Ensure Python 3.11 or higher is installed
-PYTHON_VERSION=$(python3 --version 2>&1 | grep -oP '\d+\.\d+')
-if [[ -z "$PYTHON_VERSION" || $(echo "$PYTHON_VERSION < 3.11" | bc -l) -eq 1 ]]; then
-    echo "Error: Python 3.11 or higher is required."
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Ensure Python 3.11 or higher is installed (portable version parse)
+if ! command -v python3 &> /dev/null; then
+    echo "Error: python3 is not installed."
+    exit 1
+fi
+
+PYTHON_VERSION="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')"
+MAJOR="$(python3 -c 'import sys; print(sys.version_info[0])')"
+MINOR="$(python3 -c 'import sys; print(sys.version_info[1])')"
+
+if [[ "$MAJOR" -lt 3 ]] || { [[ "$MAJOR" -eq 3 ]] && [[ "$MINOR" -lt 11 ]]; }; then
+    echo "Error: Python 3.11 or higher is required (found ${PYTHON_VERSION})."
     exit 1
 fi
 
@@ -15,12 +29,14 @@ if ! command -v pip3 &> /dev/null; then
     exit 1
 fi
 
-# Install dependencies
-echo "Installing Python dependencies..."
-pip3 install openpyxl==3.1.3 chardet tqdm beautifulsoup4
+# Install dependencies from requirements.txt (single source of truth)
+echo "Installing Python dependencies from requirements.txt..."
+pip3 install -r requirements.txt
 
 # Verify installation
 echo "Verifying installed packages..."
 pip3 show openpyxl chardet tqdm beautifulsoup4
 
 echo "Installation complete. You can now run the project scripts."
+echo "Tip: quote paths that contain spaces, e.g.:"
+echo "  python3 execute_all_scripts.py \"audit files\" \"output files\" --verbose"

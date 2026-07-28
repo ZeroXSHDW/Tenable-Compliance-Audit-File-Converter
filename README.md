@@ -36,7 +36,7 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
 3. **Install Dependencies**:
    ```bash
    pip3 install -r requirements.txt
-   # or
+   # or (macOS / Linux — uses python3 version checks, no grep -P / bc)
    ./install_requirements.sh
    ```
 
@@ -46,12 +46,24 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
 
 ## Usage
 
-1. **Convert Audit Files**:
-   ```bash
-   python execute_all_scripts.py "audit files" "output files" --verbose
-   ```
-   - Automatically creates `output files/{json,xlsx,html,csv}`, `debug/audit_logs`, and `config` folders.
-   - Processes `.audit` files into JSON, XLSX, and HTML.
+**Always quote paths that contain spaces** (`audit files`, `output files`).
+
+```bash
+python3 execute_all_scripts.py "audit files" "output files" --verbose
+```
+
+- Creates `output files/{json,xlsx,html,csv}`, `debug/audit_logs`, and `config` folders as needed.
+- Processes `.audit` files into JSON, XLSX, and HTML.
+- See CLI help: `python3 execute_all_scripts.py --help`
+
+Without quotes, the shell splits on spaces and the script will receive wrong arguments.
+
+## Paths with spaces
+
+| Do | Don't |
+| :--- | :--- |
+| `python3 execute_all_scripts.py "audit files" "output files"` | `python3 execute_all_scripts.py audit files output files` |
+| `ls -l "audit files"/*` or `ls -l audit\ files/*` | `ls -l audit files/*` |
 
 ## Outputs
 - **JSON**: `output files/json/AS400/extracted_data_*.json`
@@ -70,7 +82,7 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
         "config_file": "config.json"
     },
     "preprocessing": {
-        "key_fields": ["description", "type", ...]
+        "key_fields": ["description", "type"]
     },
     "logging": {
         "level": "INFO",
@@ -91,7 +103,7 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
   ```
 - **No Audit Files**:
   ```bash
-  ls -l audit\ files/*
+  ls -l "audit files"/*
   ```
 - **XLSX Formatting**:
   ```bash
@@ -102,6 +114,6 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
   ```bash
   chmod -R u+rw .
   ```
-  
+
 ## License
 This project is licensed under the Apache 2.0 License. See `LICENSE` file for details.

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Syntax check (py_compile)
+        run: |
+          python -m py_compile \
+            execute_all_scripts.py \
+            data_extract_to_json.py \
+            audit_extract_helper.py \
+            audit_parse_detector.py \
+            generate_status_log.py \
+            audit_utils/__init__.py
+      - name: Import smoke
+        run: |
+          python -c "import audit_utils; import data_extract_to_json; import audit_extract_helper; import audit_parse_detector; import generate_status_log"
