@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import logging
 from typing import Set, Tuple
 from audit_utils import detect_encoding

@@ -163,10 +163,10 @@ def write_xlsx(file_path: str, fields: List[str], items: List[dict], config: dic
             column = col[0].column_letter
             for cell in col:
                 try:
-                    if len(str(cell.value)) > max_length:
+                    if cell.value is not None and len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
-                except:
-                    pass
+                except (TypeError, ValueError, AttributeError):
+                    continue
             adjusted_width = min(max_length + 2, 100)
             ws.column_dimensions[column].width = adjusted_width
         

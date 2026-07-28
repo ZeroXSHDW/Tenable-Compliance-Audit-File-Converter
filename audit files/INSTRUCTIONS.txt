@@ -25,6 +25,7 @@ Instructions for Preparing Tenable Compliance Audit Files
      rmdir portal_audits
      ```
    - This ensures `.audit` files are in `audit files/<platform>/*.audit` (e.g., `audit files/AS400/ibm_v7_r2_iseries.audit`).
+   - Alternatively, leave `portal_audits/<platform>/*.audit` in place — `execute_all_scripts.py` accepts both layouts.
 
 4. Verify:
    - Check the folder structure:

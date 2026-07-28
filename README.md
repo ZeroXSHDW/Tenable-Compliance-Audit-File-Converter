@@ -7,7 +7,9 @@
 Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://www.tenable.com/downloads/download-all-compliance-audit-files)) into formatted XLSX and HTML documents. The pipeline prioritizes the `description` field and mirrors the input folder structure.
 
 ### Features
-- **Input**: `audit files/<platform>/*.audit` (e.g., `audit files/AS400/ibm_v7_r2_iseries.audit`).
+- **Input** (either layout):
+  - Flattened: `audit files/<platform>/*.audit` (per `audit files/INSTRUCTIONS.txt`)
+  - Raw extract: `audit files/portal_audits/<platform>/*.audit`
 - **Outputs**:
   - JSON: `output files/json/<platform>/*.json`.
   - XLSX: `output files/xlsx/<platform>/*.xlsx` (bold headers, auto-sized columns, text wrapping, borders, alternating colors, frozen top row).

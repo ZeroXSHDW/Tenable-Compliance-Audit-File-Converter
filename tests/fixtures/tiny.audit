@@ -1,0 +1,12 @@
+<custom_item>
+description: Ensure password policy max age is set
+type: CMD
+cmd: grep PASS_MAX_DAYS /etc/login.defs
+value: PASS_MAX_DAYS[[:space:]]+90
+</custom_item>
+
+<item>
+description: Placeholder informational check
+type: FILE_CONTENT_CHECK
+file: /etc/issue
+</item>

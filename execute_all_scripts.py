@@ -394,6 +394,9 @@ def execute_all(audit_dir: str, output_dir: str, config: Dict, logger: logging.L
         print(f"Starting audit processing in {audit_dir}")
         logger.info(f"Starting audit processing in {audit_dir}")
         logger.info(f"Output directory: {output_dir}")
+        if verbose:
+            logger.setLevel(logging.DEBUG)
+            logger.debug("Verbose logging enabled")
         
         # Clean up existing CSV files
         csv_dir = os.path.join(output_dir, "csv")
@@ -401,26 +404,47 @@ def execute_all(audit_dir: str, output_dir: str, config: Dict, logger: logging.L
             os.remove(csv_file)
             logger.info(f"Removed residual CSV file: {csv_file}")
         
-        # Scan portal_audits for platform subfolders
+        # Accept either portal_audits/<platform>/*.audit (raw Tenable extract)
+        # or <platform>/*.audit (flattened layout from INSTRUCTIONS.txt / README).
         portal_audits_dir = os.path.join(audit_dir, "portal_audits")
-        if not os.path.isdir(portal_audits_dir):
-            logger.error(f"No portal_audits directory found in {audit_dir}")
-            print(f"Error: No portal_audits directory found in {audit_dir}")
-            return
-        
-        platforms = [d for d in os.listdir(portal_audits_dir) if os.path.isdir(os.path.join(portal_audits_dir, d))]
-        logger.info(f"Found platforms: {', '.join(platforms)}")
-        print(f"Found {len(platforms)} platforms")
+        if os.path.isdir(portal_audits_dir):
+            platforms_root = portal_audits_dir
+            layout = "portal_audits"
+        else:
+            platforms_root = audit_dir
+            layout = "flat"
+
+        skip_names = {"portal_audits", "debug", "config", "__pycache__"}
+        platforms = [
+            d for d in os.listdir(platforms_root)
+            if os.path.isdir(os.path.join(platforms_root, d)) and d not in skip_names
+            and not d.startswith(".")
+        ]
+        platforms_with_audits = [
+            p for p in platforms
+            if glob.glob(os.path.join(platforms_root, p, "*.audit"))
+        ]
+
+        if not platforms_with_audits:
+            msg = (
+                f"No platform folders with *.audit files found under {audit_dir}. "
+                "Expected either "
+                f"{os.path.join(audit_dir, 'portal_audits', '<platform>', '*.audit')} "
+                f"or {os.path.join(audit_dir, '<platform>', '*.audit')}."
+            )
+            logger.error(msg)
+            print(f"Error: {msg}")
+            raise FileNotFoundError(msg)
+
+        logger.info(f"Using {layout} layout; platforms: {', '.join(sorted(platforms_with_audits))}")
+        print(f"Found {len(platforms_with_audits)} platforms ({layout} layout)")
         
         processed_files = 0
         failed_files = 0
         
-        for platform in sorted(platforms):
-            platform_dir = os.path.join(portal_audits_dir, platform)
+        for platform in sorted(platforms_with_audits):
+            platform_dir = os.path.join(platforms_root, platform)
             audit_files = glob.glob(os.path.join(platform_dir, "*.audit"))
-            if not audit_files:
-                logger.warning(f"No audit files found in {platform_dir}")
-                continue
             
             print(f"Processing platform: {platform} ({len(audit_files)} audit files)")
             logger.info(f"Processing platform: {platform} ({len(audit_files)} audit files)")
@@ -443,6 +467,8 @@ def execute_all(audit_dir: str, output_dir: str, config: Dict, logger: logging.L
         
         print(f"Processing complete: {processed_files} files processed, {failed_files} failures")
         logger.info(f"Processing complete: {processed_files} files processed, {failed_files} failures")
+        if failed_files:
+            raise RuntimeError(f"{failed_files} audit file(s) failed during processing")
         
     except Exception as e:
         logger.error(f"Audit processing failed: {str(e)}")
@@ -451,10 +477,31 @@ def execute_all(audit_dir: str, output_dir: str, config: Dict, logger: logging.L
 
 def main() -> None:
     """Main function to execute all scripts."""
-    parser = argparse.ArgumentParser(description="Execute all audit file processing scripts with automatic field detection.")
-    parser.add_argument("audit_dir", help="Directory containing audit file subfolders")
-    parser.add_argument("output_dir", help="Directory for output JSON, XLSX, and HTML files")
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    parser = argparse.ArgumentParser(
+        description="Execute all audit file processing scripts with automatic field detection.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Expected input layouts (either works):\n"
+            "  1) <audit_dir>/portal_audits/<platform>/*.audit  (raw Tenable extract)\n"
+            "  2) <audit_dir>/<platform>/*.audit               (flattened per INSTRUCTIONS.txt)\n"
+            "\n"
+            "Always quote paths that contain spaces:\n"
+            "  python3 execute_all_scripts.py \"audit files\" \"output files\"\n"
+        ),
+    )
+    parser.add_argument(
+        "audit_dir",
+        help="Directory containing platform audit folders (see --help epilog for layouts)",
+    )
+    parser.add_argument(
+        "output_dir",
+        help="Directory for output JSON, XLSX, and HTML files",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable DEBUG logging for the main execute_all logger",
+    )
     args = parser.parse_args()
 
     # Initialize logger early
@@ -462,6 +509,7 @@ def main() -> None:
     os.makedirs(debug_dir, exist_ok=True)
     logger = setup_logging(debug_dir)
 
+    original_checksum = None
     try:
         # Load or create config early
         config_path = os.path.join(os.getcwd(), "config.json")
@@ -495,8 +543,8 @@ def main() -> None:
         execute_all(args.audit_dir, args.output_dir, config, logger, field_logger, args.verbose)
         
         # Verify config unchanged
-        if os.path.isfile(config_path):
-            verify_config_unchanged(config_path, get_config_checksum(config_path))
+        if original_checksum is not None and os.path.isfile(config_path):
+            verify_config_unchanged(config_path, original_checksum)
         
     except Exception as e:
         logger.error(f"Execution failed: {str(e)}")
