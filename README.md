@@ -23,8 +23,8 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
 
 1. **Clone from GitHub**:
    ```bash
-   git clone <repository-url> ~/Documents/Tenable-Compliance-Audit-File-Converter-main
-   cd ~/Documents/Tenable-Compliance-Audit-File-Converter-main
+   git clone https://github.com/ZeroXSHDW/Tenable-Compliance-Audit-File-Converter.git
+   cd Tenable-Compliance-Audit-File-Converter
    ```
 
 2. **Set Permissions**:
@@ -35,6 +35,8 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
 
 3. **Install Dependencies**:
    ```bash
+   pip3 install -r requirements.txt
+   # or
    ./install_requirements.sh
    ```
 

@@ -1,0 +1,26 @@
+# Generated outputs and logs
+output files/
+debug/
+*.xlsx
+*.xls
+*.html
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*~
+.idea/
+.vscode/
+*.log
+*.tmp
+*.bak
