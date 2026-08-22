@@ -132,3 +132,11 @@ python3 -m unittest tests.test_audit_parse_smoke -v
 
 ## License
 This project is licensed under the Apache 2.0 License. See `LICENSE` file for details.
+
+## Contributing
+
+Keep converters deterministic and preserve safe handling of paths, fixtures, and audit data. Run the verification commands above and see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Security
+
+Report vulnerabilities privately using [SECURITY.md](SECURITY.md). Do not publish audit exports, credentials, or customer-specific compliance data.
