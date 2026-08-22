@@ -117,5 +117,18 @@ Without quotes, the shell splits on spaces and the script will receive wrong arg
   chmod -R u+rw .
   ```
 
+## Verification
+
+The CI gate validates the dependency graph, compiles the conversion modules,
+imports the public helpers, and runs the fixture-backed parser smoke tests. Run
+the same checks locally with:
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 -m pip check
+python3 -m py_compile execute_all_scripts.py data_extract_to_json.py audit_extract_helper.py audit_parse_detector.py generate_status_log.py audit_utils/__init__.py
+python3 -m unittest tests.test_audit_parse_smoke -v
+```
+
 ## License
 This project is licensed under the Apache 2.0 License. See `LICENSE` file for details.
