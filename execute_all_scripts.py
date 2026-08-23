@@ -110,7 +110,7 @@ def create_default_config(config_path: str, logger: logging.Logger) -> Dict:
         }
     }
     try:
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        os.makedirs(os.path.dirname(config_path) or ".", exist_ok=True)
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(default_config, f, indent=4)
         logger.info(f"Created default config at {config_path}")

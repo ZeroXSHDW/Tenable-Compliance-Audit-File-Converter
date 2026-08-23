@@ -9,6 +9,7 @@ from openpyxl.styles import Font, Border, Side, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from typing import Dict, List
 from html import escape
+from audit_utils import sanitize_cell_value
 
 __version__ = "2.0.5"
 __changelog__ = """
@@ -84,7 +85,7 @@ def write_xlsx(xlsx_file: str, fields: List[str], items: List[Dict], config: Dic
         for row_idx, item in enumerate(items, start=2):
             for col_idx, field in enumerate(fields, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx)
-                cell.value = item.get(field, "")
+                cell.value = sanitize_cell_value(item.get(field, ""), field, xlsx_file)
                 cell.border = thin_border
                 cell.alignment = wrap_alignment
                 # Apply alternating row colors

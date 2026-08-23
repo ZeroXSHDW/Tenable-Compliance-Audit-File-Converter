@@ -123,11 +123,19 @@ def ensure_dependencies(logger: logging.Logger, output_format: str, verbose: boo
         logger.info(f"Dependencies checked: openpyxl={'available' if OPENPYXL_AVAILABLE else 'missing'}, chardet={'available' if 'chardet' in sys.modules else 'missing'}, tqdm={'available' if 'tqdm' in sys.modules else 'missing'}")
 
 def sanitize_cell_value(value: str, field: str, file_path: str) -> str:
-    """Sanitize cell value by removing invalid characters for XLSX."""
+    """Sanitize text before writing it to XLSX.
+
+    Audit files are external input. Prefixing formula-like values with an
+    apostrophe keeps Excel and compatible spreadsheet viewers from evaluating
+    a value such as ``=HYPERLINK(...)`` when an export is opened.
+    """
     logger = logging.getLogger('audit_utils')
     if not isinstance(value, str):
         value = str(value)
     sanitized = re.sub(r'[^\x20-\x7E\xA0-\xFFFF]', '[INVALID_CHAR]', value)
+    if sanitized.startswith(('=', '+', '-', '@')):
+        sanitized = "'" + sanitized
+        logger.info(f"Prefixed formula-like cell value in {file_path}, field '{field}'")
     if sanitized != value:
         logger.info(f"Sanitized cell value in {file_path}, field '{field}': {value[:50]}... to {sanitized[:50]}...")
     else:
