@@ -28,6 +28,8 @@ class TestAuditParseSmoke(unittest.TestCase):
         runtime_pin = root.joinpath(".python-version").read_text(encoding="utf-8").strip()
         ci_lock = root.joinpath("requirements-ci.txt").read_text(encoding="utf-8")
         self.assertIn("git diff --check", readme)
+        self.assertIn("bash ./install_requirements.sh", readme)
+        self.assertNotIn("\n   ./install_requirements.sh", readme)
         self.assertIn("pip_audit -r requirements-ci.txt", readme)
         self.assertIn("pip_audit -r requirements-ci.txt", workflow)
         self.assertIn("runs-on: ubuntu-24.04", workflow)
