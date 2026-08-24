@@ -3,7 +3,7 @@ import re
 import json
 import logging
 from typing import Dict, List, Set
-from audit_utils import detect_encoding, validate_json_file
+from audit_utils import atomic_write_text, detect_encoding, validate_json_file
 
 __version__ = "2.0.4"
 __changelog__ = """
@@ -29,6 +29,8 @@ def is_valid_key(key: str) -> bool:
 
 def extract_to_json(audit_file: str, output_dir: str, config: Dict, logger: logging.Logger) -> str:
     """Extract audit file content to JSON."""
+    file_logger = None
+    file_handler = None
     try:
         # Validate input
         if not os.path.isfile(audit_file):
@@ -118,8 +120,7 @@ def extract_to_json(audit_file: str, output_dir: str, config: Dict, logger: logg
                 filtered_items.append(filtered_item)
         
         # Write JSON output
-        with open(json_output, 'w', encoding='utf-8') as f:
-            json.dump(filtered_items, f, indent=4)
+        atomic_write_text(json_output, json.dumps(filtered_items, indent=4))
         
         # Log results
         file_logger.info(f"Extracted {len(filtered_items)} items to {json_output}")
@@ -130,10 +131,14 @@ def extract_to_json(audit_file: str, output_dir: str, config: Dict, logger: logg
             file_logger.error(f"Generated JSON {json_output} is invalid")
             return ""
         
-        file_handler.close()
         return json_output
-    
+
     except Exception as e:
         logger.error(f"Failed to extract {audit_file} to JSON: {str(e)}")
-        file_logger.error(f"Extraction failed: {str(e)}") if 'file_logger' in locals() else None
+        if file_logger is not None:
+            file_logger.error(f"Extraction failed: {str(e)}")
         return ""
+    finally:
+        if file_logger is not None and file_handler is not None:
+            file_logger.removeHandler(file_handler)
+            file_handler.close()

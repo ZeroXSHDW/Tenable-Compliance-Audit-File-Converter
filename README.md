@@ -128,7 +128,7 @@ with:
 python3 -m pip install -r requirements.txt
 python3 -m pip check
 python3 -m pip install pip-audit
-python3 -m pip_audit -l --progress-spinner off
+python3 -m pip_audit -r requirements.txt --progress-spinner off
 python3 -m py_compile execute_all_scripts.py data_extract_to_json.py audit_extract_helper.py audit_parse_detector.py generate_status_log.py audit_utils/__init__.py
 python3 -m unittest tests.test_audit_parse_smoke -v
 git diff --check

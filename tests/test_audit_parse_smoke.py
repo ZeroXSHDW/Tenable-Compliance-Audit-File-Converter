@@ -11,7 +11,7 @@ from pathlib import Path
 import openpyxl
 
 from audit_extract_helper import write_xlsx
-from audit_utils import sanitize_cell_value
+from audit_utils import atomic_replace, sanitize_cell_value
 from audit_parse_detector import detect_missing_keys
 from data_extract_to_json import extract_to_json
 from execute_all_scripts import create_default_config
@@ -25,6 +25,8 @@ class TestAuditParseSmoke(unittest.TestCase):
         readme = Path(__file__).resolve().parents[1].joinpath("README.md").read_text(encoding="utf-8")
         workflow = Path(__file__).resolve().parents[1].joinpath(".github/workflows/ci.yml").read_text(encoding="utf-8")
         self.assertIn("git diff --check", readme)
+        self.assertIn("pip_audit -r requirements.txt", readme)
+        self.assertIn("pip_audit -r requirements.txt", workflow)
         self.assertEqual(
             workflow.count("git diff --check"),
             workflow.count("uses: actions/checkout@"),
@@ -32,6 +34,20 @@ class TestAuditParseSmoke(unittest.TestCase):
 
     def test_fixture_exists(self) -> None:
         self.assertTrue(FIXTURE.is_file(), f"Missing fixture: {FIXTURE}")
+
+    def test_atomic_replace_preserves_last_good_artifact_on_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp) / "result.json"
+            destination.write_text('{"status": "known-good"}', encoding="utf-8")
+
+            def fail(_temporary_path: str) -> None:
+                raise RuntimeError("simulated writer failure")
+
+            with self.assertRaisesRegex(RuntimeError, "simulated writer failure"):
+                atomic_replace(str(destination), fail)
+
+            self.assertEqual('{"status": "known-good"}', destination.read_text(encoding="utf-8"))
+            self.assertEqual([], list(destination.parent.glob(".result.json.*.tmp")))
 
     def test_detect_missing_keys(self) -> None:
         missing, all_keys = detect_missing_keys(str(FIXTURE), {"description", "type", "cmd", "value"})
