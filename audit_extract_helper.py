@@ -5,10 +5,12 @@ import logging
 import time
 import argparse
 import openpyxl
+from io import StringIO
 from openpyxl.styles import Font, Border, Side, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from typing import Dict, List
 from html import escape
+from audit_utils import atomic_replace, atomic_write_text, sanitize_cell_value
 
 __version__ = "2.0.5"
 __changelog__ = """
@@ -39,6 +41,9 @@ def setup_xlsx_conversion_logger(debug_dir: str, config: Dict) -> logging.Logger
     log_file = os.path.join(debug_dir, "xlsx_conversion_log.txt")
     logger = logging.getLogger("xlsx_conversion")
     logger.setLevel(logging.INFO)
+    for existing_handler in list(logger.handlers):
+        logger.removeHandler(existing_handler)
+        existing_handler.close()
     handler = logging.FileHandler(log_file, encoding='utf-8')
     handler.setFormatter(logging.Formatter(config['logging']['format']))
     logger.addHandler(handler)
@@ -84,7 +89,7 @@ def write_xlsx(xlsx_file: str, fields: List[str], items: List[Dict], config: Dic
         for row_idx, item in enumerate(items, start=2):
             for col_idx, field in enumerate(fields, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx)
-                cell.value = item.get(field, "")
+                cell.value = sanitize_cell_value(item.get(field, ""), field, xlsx_file)
                 cell.border = thin_border
                 cell.alignment = wrap_alignment
                 # Apply alternating row colors
@@ -104,7 +109,7 @@ def write_xlsx(xlsx_file: str, fields: List[str], items: List[Dict], config: Dic
         ws.freeze_panes = ws['A2']
         
         # Save workbook
-        wb.save(xlsx_file)
+        atomic_replace(xlsx_file, wb.save)
         logger.info(f"Generated XLSX file: {xlsx_file} with enhanced formatting")
     except Exception as e:
         logger.error(f"Failed to write XLSX file {xlsx_file}: {str(e)}")
@@ -113,29 +118,30 @@ def write_xlsx(xlsx_file: str, fields: List[str], items: List[Dict], config: Dic
 def write_html(html_file: str, fields: List[str], items: List[Dict], config: Dict, logger: logging.Logger) -> None:
     """Write items to an HTML file."""
     try:
-        with open(html_file, 'w', encoding='utf-8') as f:
-            f.write("<!DOCTYPE html>\n<html>\n<head>\n")
-            f.write("<title>Audit Data</title>\n")
-            f.write("<style>\n")
-            f.write("table { border-collapse: collapse; width: 100%; }\n")
-            f.write("th, td { border: 1px solid black; padding: 8px; text-align: left; }\n")
-            f.write("th { background-color: #f2f2f2; }\n")
-            f.write("</style>\n")
-            f.write("</head>\n<body>\n")
-            f.write("<h1>Audit Data</h1>\n")
-            f.write("<table>\n")
-            f.write("<tr>\n")
+        buffer = StringIO()
+        buffer.write("<!DOCTYPE html>\n<html>\n<head>\n")
+        buffer.write("<title>Audit Data</title>\n")
+        buffer.write("<style>\n")
+        buffer.write("table { border-collapse: collapse; width: 100%; }\n")
+        buffer.write("th, td { border: 1px solid black; padding: 8px; text-align: left; }\n")
+        buffer.write("th { background-color: #f2f2f2; }\n")
+        buffer.write("</style>\n")
+        buffer.write("</head>\n<body>\n")
+        buffer.write("<h1>Audit Data</h1>\n")
+        buffer.write("<table>\n")
+        buffer.write("<tr>\n")
+        for field in fields:
+            buffer.write(f"<th>{escape(field)}</th>\n")
+        buffer.write("</tr>\n")
+        for item in items:
+            buffer.write("<tr>\n")
             for field in fields:
-                f.write(f"<th>{escape(field)}</th>\n")
-            f.write("</tr>\n")
-            for item in items:
-                f.write("<tr>\n")
-                for field in fields:
-                    value = item.get(field, "")
-                    f.write(f"<td>{escape(str(value))}</td>\n")
-                f.write("</tr>\n")
-            f.write("</table>\n")
-            f.write("</body>\n</html>")
+                value = item.get(field, "")
+                buffer.write(f"<td>{escape(str(value))}</td>\n")
+            buffer.write("</tr>\n")
+        buffer.write("</table>\n")
+        buffer.write("</body>\n</html>")
+        atomic_write_text(html_file, buffer.getvalue())
         logger.info(f"Generated HTML file: {html_file}")
     except Exception as e:
         logger.error(f"Failed to write HTML file {html_file}: {str(e)}")
@@ -143,6 +149,7 @@ def write_html(html_file: str, fields: List[str], items: List[Dict], config: Dic
 
 def process_file(json_file: str, output_dir: str, config: Dict, logger: logging.Logger) -> None:
     """Process a JSON file to generate XLSX and HTML files."""
+    xlsx_logger = None
     try:
         # Initialize XLSX conversion logger
         xlsx_logger = setup_xlsx_conversion_logger(config['directories']['debug_dir'], config)
@@ -206,8 +213,14 @@ def process_file(json_file: str, output_dir: str, config: Dict, logger: logging.
         
     except Exception as e:
         logger.error(f"Failed to process {json_file}: {str(e)}")
-        xlsx_logger.error(f"Failed to process {json_file}: {str(e)}")
+        if xlsx_logger is not None:
+            xlsx_logger.error(f"Failed to process {json_file}: {str(e)}")
         raise
+    finally:
+        if xlsx_logger is not None:
+            for handler in list(xlsx_logger.handlers):
+                xlsx_logger.removeHandler(handler)
+                handler.close()
 
 def main() -> None:
     """Main function for testing audit_extract_helper."""

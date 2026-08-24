@@ -8,7 +8,7 @@ import shutil
 import time
 from typing import Dict, Set
 from datetime import datetime
-from audit_utils import cached_config, setup_logger, get_config_checksum, verify_config_unchanged
+from audit_utils import atomic_write_text, cached_config, setup_logger, get_config_checksum, verify_config_unchanged
 from data_extract_to_json import extract_to_json
 from audit_extract_helper import process_file
 from audit_parse_detector import detect_missing_keys
@@ -110,9 +110,8 @@ def create_default_config(config_path: str, logger: logging.Logger) -> Dict:
         }
     }
     try:
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(default_config, f, indent=4)
+        os.makedirs(os.path.dirname(config_path) or ".", exist_ok=True)
+        atomic_write_text(config_path, json.dumps(default_config, indent=4))
         logger.info(f"Created default config at {config_path}")
         return default_config
     except Exception as e:
@@ -123,8 +122,7 @@ def save_platform_config(config: Dict, platform: str, config_dir: str, logger: l
     """Save platform-specific config file."""
     os.makedirs(config_dir, exist_ok=True)
     config_path = os.path.join(config_dir, f"config_{platform}.json")
-    with open(config_path, 'w', encoding='utf-8') as f:
-        json.dump(config, f, indent=4)
+    atomic_write_text(config_path, json.dumps(config, indent=4))
     checksum = get_config_checksum(config_path)
     logger.info(f"Saved platform config {config_path} with checksum {checksum}")
     return config_path

@@ -6,6 +6,25 @@
 
 Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://www.tenable.com/downloads/download-all-compliance-audit-files)) into formatted XLSX and HTML documents. The pipeline prioritizes the `description` field and mirrors the input folder structure.
 
+
+## Architecture
+
+The converter is a local, deterministic batch pipeline:
+
+1. `execute_all_scripts.py` validates the input/output paths and coordinates the
+   conversion run.
+2. The audit parser and detector modules read Tenable `.audit` files without
+   changing the source tree.
+3. The JSON writer preserves the normalized records for machine-readable review.
+4. The XLSX and HTML writers render the same parsed records into analyst-facing
+   outputs, while the status and debug writers record counts and failures.
+5. Atomic output replacement keeps the last good artifact when a writer fails.
+
+The input directory is read-only from the converter's perspective. Generated
+JSON, XLSX, HTML, CSV, status reports, and logs belong under the configured
+output/debug directories; keep those generated artifacts outside source control
+when they contain organization-specific controls or findings.
+
 ### Features
 - **Input** (either layout):
   - Flattened: `audit files/<platform>/*.audit` (per `audit files/INSTRUCTIONS.txt`)
@@ -19,6 +38,7 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
 
 ## Prerequisites
 - Python 3.11+
+- CI and reproducible verification use the checked-in Python 3.12 pin in `.python-version`.
 - Tenable `audits.tar.gz`
 
 ## Setup
@@ -31,7 +51,6 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
 
 2. **Set Permissions**:
    ```bash
-   chmod +x install_requirements.sh
    chmod 644 *.py config.json
    ```
 
@@ -39,7 +58,7 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
    ```bash
    pip3 install -r requirements.txt
    # or (macOS / Linux — uses python3 version checks, no grep -P / bc)
-   ./install_requirements.sh
+   bash ./install_requirements.sh
    ```
 
 4. **Extract Audit Files**:
@@ -66,6 +85,22 @@ Without quotes, the shell splits on spaces and the script will receive wrong arg
 | :--- | :--- |
 | `python3 execute_all_scripts.py "audit files" "output files"` | `python3 execute_all_scripts.py audit files output files` |
 | `ls -l "audit files"/*` or `ls -l audit\ files/*` | `ls -l audit files/*` |
+
+
+## Distribution and data handling
+
+This project is distributed as a command-line converter for trusted local or
+controlled build environments; it is not a hosted service and does not require
+a database, API credentials, or an always-on runtime. CI verifies the parser,
+writers, dependency graph, and representative fixture data, but it does not
+upload Tenable archives or generated compliance exports.
+
+Treat `audit files/`, `output files/`, and `debug/` as potentially sensitive
+working data. Review generated files before sharing them, remove organization-
+specific exports from test fixtures, and never commit credentials, customer
+records, or production audit results. A release handoff should include the
+source revision, Python version, locked verification dependencies, and the
+verification commands shown below.
 
 ## Outputs
 - **JSON**: `output files/json/AS400/extracted_data_*.json`
@@ -101,7 +136,7 @@ Without quotes, the shell splits on spaces and the script will receive wrong arg
 - **Errors**:
   ```bash
   cat debug/execute_all_log.txt
-  ./install_requirements.sh
+  bash ./install_requirements.sh
   ```
 - **No Audit Files**:
   ```bash
@@ -117,5 +152,37 @@ Without quotes, the shell splits on spaces and the script will receive wrong arg
   chmod -R u+rw .
   ```
 
+## Verification
+
+The CI gate validates the dependency graph, audits the pinned runtime
+requirements, compiles the conversion modules, imports the public helpers, and
+runs the fixture-backed parser/conversion tests. Run the same checks locally
+with:
+
+```bash
+python3 -m pip install --require-hashes -r requirements-ci.txt
+python3 -m pip check
+python3 -m pip_audit -r requirements-ci.txt --progress-spinner off
+python3 -m py_compile execute_all_scripts.py data_extract_to_json.py audit_extract_helper.py audit_parse_detector.py generate_status_log.py audit_utils/__init__.py
+python3 -m unittest tests.test_audit_parse_smoke -v
+git diff --check
+```
+
+`requirements-ci.txt` is generated from `requirements-ci.in` for Python 3.12 and
+contains hashes for the runtime and verification graph. Regenerate it only when
+reviewing a deliberate dependency update:
+
+```bash
+uv pip compile requirements-ci.in --python-version 3.12 --universal --generate-hashes --output-file requirements-ci.txt
+```
+
 ## License
 This project is licensed under the Apache 2.0 License. See `LICENSE` file for details.
+
+## Contributing
+
+Keep converters deterministic and preserve safe handling of paths, fixtures, and audit data. Run the verification commands above and see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Security
+
+Report vulnerabilities privately using [SECURITY.md](SECURITY.md). Do not publish audit exports, credentials, or customer-specific compliance data.

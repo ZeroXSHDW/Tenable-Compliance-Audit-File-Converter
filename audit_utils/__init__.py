@@ -5,7 +5,8 @@ import logging
 import re
 import shutil
 import hashlib
-from typing import List, Set
+import tempfile
+from typing import Callable, List, Set
 from datetime import datetime
 try:
     import openpyxl
@@ -32,6 +33,42 @@ __changelog__ = """
 """
 
 FILENAME_PATTERN = re.compile(r'[^a-zA-Z0-9_.-]+')
+
+
+def atomic_replace(file_path: str, writer: Callable[[str], None]) -> None:
+    """Write a generated artifact beside its destination, then replace it atomically."""
+    destination = os.path.abspath(file_path)
+    parent = os.path.dirname(destination) or "."
+    os.makedirs(parent, exist_ok=True)
+    file_descriptor, temporary_path = tempfile.mkstemp(
+        prefix=f".{os.path.basename(destination)}.",
+        suffix=".tmp",
+        dir=parent,
+    )
+    os.close(file_descriptor)
+    try:
+        writer(temporary_path)
+        with open(temporary_path, "rb") as handle:
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, destination)
+    except BaseException:
+        try:
+            os.unlink(temporary_path)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def atomic_write_text(file_path: str, content: str, encoding: str = "utf-8") -> None:
+    """Publish text without exposing a partially written destination."""
+
+    def write_temp(temporary_path: str) -> None:
+        with open(temporary_path, "w", encoding=encoding) as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    atomic_replace(file_path, write_temp)
 
 def setup_logger(name: str, log_file: str, config: dict) -> logging.Logger:
     """Set up a logger with file and console output."""
@@ -123,11 +160,19 @@ def ensure_dependencies(logger: logging.Logger, output_format: str, verbose: boo
         logger.info(f"Dependencies checked: openpyxl={'available' if OPENPYXL_AVAILABLE else 'missing'}, chardet={'available' if 'chardet' in sys.modules else 'missing'}, tqdm={'available' if 'tqdm' in sys.modules else 'missing'}")
 
 def sanitize_cell_value(value: str, field: str, file_path: str) -> str:
-    """Sanitize cell value by removing invalid characters for XLSX."""
+    """Sanitize text before writing it to XLSX.
+
+    Audit files are external input. Prefixing formula-like values with an
+    apostrophe keeps Excel and compatible spreadsheet viewers from evaluating
+    a value such as ``=HYPERLINK(...)`` when an export is opened.
+    """
     logger = logging.getLogger('audit_utils')
     if not isinstance(value, str):
         value = str(value)
     sanitized = re.sub(r'[^\x20-\x7E\xA0-\xFFFF]', '[INVALID_CHAR]', value)
+    if sanitized.startswith(('=', '+', '-', '@')):
+        sanitized = "'" + sanitized
+        logger.info(f"Prefixed formula-like cell value in {file_path}, field '{field}'")
     if sanitized != value:
         logger.info(f"Sanitized cell value in {file_path}, field '{field}': {value[:50]}... to {sanitized[:50]}...")
     else:
@@ -173,7 +218,7 @@ def write_xlsx(file_path: str, fields: List[str], items: List[dict], config: dic
         for row in ws.rows:
             ws.row_dimensions[row[0].row].height = 15
         
-        wb.save(file_path)
+        atomic_replace(file_path, wb.save)
         logger.debug(f"XLSX file saved: {file_path}")
     except Exception as e:
         logger.error(f"Failed to write XLSX {file_path}: {str(e)}")

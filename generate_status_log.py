@@ -28,8 +28,8 @@ def generate_status(output_dir: str, config: dict, logger: logging.Logger) -> No
             logger.error(f"Output directory {output_dir} does not exist or is not a directory")
             return
 
-        json_files = glob.glob(os.path.join(output_dir, "extracted_data_*.json"))
-        xlsx_files = glob.glob(os.path.join(output_dir, "extracted_*.xlsx"))
+        json_files = glob.glob(os.path.join(output_dir, "json", "**", "*.json"), recursive=True)
+        xlsx_files = glob.glob(os.path.join(output_dir, "xlsx", "**", "*.xlsx"), recursive=True)
         log_file = os.path.join(config['directories']['debug_dir'], "extract_parse_status_log.txt")
         
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -53,7 +53,12 @@ def generate_status(output_dir: str, config: dict, logger: logging.Logger) -> No
                         f.write(f"INFO - JSON file {json_file}: {item_count} items\n")
                         
                         filename = os.path.basename(json_file).replace("extracted_data_", "").replace(".json", "")
-                        extract_log = os.path.join(config['directories']['debug_dir'], f"extract_log_{filename}.txt")
+                        extract_log = os.path.join(
+                            config['directories']['debug_dir'], "audit_logs", f"extract_log_{filename}.txt"
+                        )
+                        if not os.path.exists(extract_log):
+                            # Keep compatibility with older flat debug logs.
+                            extract_log = os.path.join(config['directories']['debug_dir'], f"extract_log_{filename}.txt")
                         if os.path.exists(extract_log):
                             with open(extract_log, 'r', encoding='utf-8') as ef:
                                 content = ef.read()
@@ -83,13 +88,37 @@ def generate_status(output_dir: str, config: dict, logger: logging.Logger) -> No
                     ws = wb.active
                     row_count = sum(1 for _ in ws.rows) - 1  # Exclude header
                     f.write(f"INFO - XLSX file {xlsx_file}: {row_count} rows\n")
+                    wb.close()
                 except Exception as e:
                     logger.error(f"Failed to process XLSX file {xlsx_file}: {str(e)}")
                     f.write(f"ERROR - Invalid XLSX file {xlsx_file}: {str(e)}\n")
-            
-            f.write(f"Summary - JSON Files: {len(json_files)}, XLSX Files: {len(xlsx_files)}, "
-                    f"Valid Data Rows (json): {sum(len(json.load(open(jf, 'r', encoding='utf-8'))) for jf in json_files if validate_json_file(jf, logger))}, "
-                    f"Valid Data Rows (xlsx): {sum(sum(1 for _ in openpyxl.load_workbook(xf).active.rows) - 1 for xf in xlsx_files if os.path.exists(xf))}\n")
+
+            valid_json_rows = 0
+            for json_file in json_files:
+                if not validate_json_file(json_file, logger):
+                    continue
+                try:
+                    with open(json_file, 'r', encoding='utf-8') as json_handle:
+                        valid_json_rows += len(json.load(json_handle))
+                except (OSError, TypeError, ValueError) as e:
+                    logger.error(f"Failed to count JSON rows in {json_file}: {str(e)}")
+
+            valid_xlsx_rows = 0
+            for xlsx_file in xlsx_files:
+                if not os.path.exists(xlsx_file):
+                    continue
+                try:
+                    workbook = openpyxl.load_workbook(xlsx_file, read_only=True)
+                    valid_xlsx_rows += max(sum(1 for _ in workbook.active.rows) - 1, 0)
+                    workbook.close()
+                except Exception as e:
+                    logger.error(f"Failed to count XLSX rows in {xlsx_file}: {str(e)}")
+
+            f.write(
+                f"Summary - JSON Files: {len(json_files)}, XLSX Files: {len(xlsx_files)}, "
+                f"Valid Data Rows (json): {valid_json_rows}, "
+                f"Valid Data Rows (xlsx): {valid_xlsx_rows}\n"
+            )
         
         logger.info(f"Status log appended to {log_file}")
     
