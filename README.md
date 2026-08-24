@@ -32,7 +32,6 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
 
 2. **Set Permissions**:
    ```bash
-   chmod +x install_requirements.sh
    chmod 644 *.py config.json
    ```
 
@@ -40,7 +39,7 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
    ```bash
    pip3 install -r requirements.txt
    # or (macOS / Linux — uses python3 version checks, no grep -P / bc)
-   ./install_requirements.sh
+   bash ./install_requirements.sh
    ```
 
 4. **Extract Audit Files**:
@@ -102,7 +101,7 @@ Without quotes, the shell splits on spaces and the script will receive wrong arg
 - **Errors**:
   ```bash
   cat debug/execute_all_log.txt
-  ./install_requirements.sh
+  bash ./install_requirements.sh
   ```
 - **No Audit Files**:
   ```bash
