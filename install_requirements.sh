@@ -29,9 +29,9 @@ if ! command -v pip3 &> /dev/null; then
     exit 1
 fi
 
-# Install dependencies from requirements.txt (single source of truth)
+# Install runtime dependencies from requirements.txt (the operator-facing contract)
 echo "Installing Python dependencies from requirements.txt..."
-pip3 install -r requirements.txt
+python3 -m pip install --disable-pip-version-check -r requirements.txt
 
 # Verify installation
 echo "Verifying installed packages..."
