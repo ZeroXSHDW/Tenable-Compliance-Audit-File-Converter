@@ -32,7 +32,7 @@ class TestAuditParseSmoke(unittest.TestCase):
         self.assertIn("## Architecture", readme)
         self.assertIn("## Distribution and data handling", readme)
         self.assertIn("local, deterministic batch pipeline", readme)
-        self.assertRegex(readme, r"does not\\s+upload Tenable archives")
+        self.assertRegex(readme, r"does not\s+upload Tenable archives")
         self.assertIn("Atomic output replacement", readme)
         self.assertIn("bash ./install_requirements.sh", readme)
         self.assertNotIn("\n   ./install_requirements.sh", readme)
