@@ -21,6 +21,15 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "tiny.audit"
 
 
 class TestAuditParseSmoke(unittest.TestCase):
+    def test_ci_and_readme_enforce_patch_hygiene(self) -> None:
+        readme = Path(__file__).resolve().parents[1].joinpath("README.md").read_text(encoding="utf-8")
+        workflow = Path(__file__).resolve().parents[1].joinpath(".github/workflows/ci.yml").read_text(encoding="utf-8")
+        self.assertIn("git diff --check", readme)
+        self.assertEqual(
+            workflow.count("git diff --check"),
+            workflow.count("uses: actions/checkout@"),
+        )
+
     def test_fixture_exists(self) -> None:
         self.assertTrue(FIXTURE.is_file(), f"Missing fixture: {FIXTURE}")
 
