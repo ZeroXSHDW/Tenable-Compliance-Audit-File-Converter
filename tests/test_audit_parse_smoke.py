@@ -22,16 +22,25 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "tiny.audit"
 
 class TestAuditParseSmoke(unittest.TestCase):
     def test_ci_and_readme_enforce_patch_hygiene(self) -> None:
-        readme = Path(__file__).resolve().parents[1].joinpath("README.md").read_text(encoding="utf-8")
-        workflow = Path(__file__).resolve().parents[1].joinpath(".github/workflows/ci.yml").read_text(encoding="utf-8")
+        root = Path(__file__).resolve().parents[1]
+        readme = root.joinpath("README.md").read_text(encoding="utf-8")
+        workflow = root.joinpath(".github/workflows/ci.yml").read_text(encoding="utf-8")
+        runtime_pin = root.joinpath(".python-version").read_text(encoding="utf-8").strip()
+        ci_lock = root.joinpath("requirements-ci.txt").read_text(encoding="utf-8")
         self.assertIn("git diff --check", readme)
-        self.assertIn("pip_audit -r requirements.txt", readme)
-        self.assertIn("pip_audit -r requirements.txt", workflow)
+        self.assertIn("pip_audit -r requirements-ci.txt", readme)
+        self.assertIn("pip_audit -r requirements-ci.txt", workflow)
         self.assertIn("runs-on: ubuntu-24.04", workflow)
         self.assertNotIn("runs-on: ubuntu-latest", workflow)
         self.assertNotIn("pip install --upgrade pip", workflow)
         self.assertNotIn("pip install --upgrade pip setuptools wheel", workflow)
-        self.assertIn('pip install --disable-pip-version-check "pip-audit==2.9.0"', workflow)
+        self.assertEqual("3.12", runtime_pin)
+        self.assertIn("python-version-file: .python-version", workflow)
+        self.assertNotIn('python-version: "3.12"', workflow)
+        self.assertIn("cache-dependency-path: requirements-ci.txt", workflow)
+        self.assertIn("--require-hashes -r requirements-ci.txt", workflow)
+        self.assertIn("--hash=sha256:", ci_lock)
+        self.assertIn("pip-audit==2.10.1", ci_lock)
         self.assertEqual(
             workflow.count("git diff --check"),
             workflow.count("uses: actions/checkout@"),
