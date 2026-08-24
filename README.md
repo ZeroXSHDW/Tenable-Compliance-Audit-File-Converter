@@ -6,6 +6,25 @@
 
 Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://www.tenable.com/downloads/download-all-compliance-audit-files)) into formatted XLSX and HTML documents. The pipeline prioritizes the `description` field and mirrors the input folder structure.
 
+
+## Architecture
+
+The converter is a local, deterministic batch pipeline:
+
+1. `execute_all_scripts.py` validates the input/output paths and coordinates the
+   conversion run.
+2. The audit parser and detector modules read Tenable `.audit` files without
+   changing the source tree.
+3. The JSON writer preserves the normalized records for machine-readable review.
+4. The XLSX and HTML writers render the same parsed records into analyst-facing
+   outputs, while the status and debug writers record counts and failures.
+5. Atomic output replacement keeps the last good artifact when a writer fails.
+
+The input directory is read-only from the converter's perspective. Generated
+JSON, XLSX, HTML, CSV, status reports, and logs belong under the configured
+output/debug directories; keep those generated artifacts outside source control
+when they contain organization-specific controls or findings.
+
 ### Features
 - **Input** (either layout):
   - Flattened: `audit files/<platform>/*.audit` (per `audit files/INSTRUCTIONS.txt`)
@@ -66,6 +85,22 @@ Without quotes, the shell splits on spaces and the script will receive wrong arg
 | :--- | :--- |
 | `python3 execute_all_scripts.py "audit files" "output files"` | `python3 execute_all_scripts.py audit files output files` |
 | `ls -l "audit files"/*` or `ls -l audit\ files/*` | `ls -l audit files/*` |
+
+
+## Distribution and data handling
+
+This project is distributed as a command-line converter for trusted local or
+controlled build environments; it is not a hosted service and does not require
+a database, API credentials, or an always-on runtime. CI verifies the parser,
+writers, dependency graph, and representative fixture data, but it does not
+upload Tenable archives or generated compliance exports.
+
+Treat `audit files/`, `output files/`, and `debug/` as potentially sensitive
+working data. Review generated files before sharing them, remove organization-
+specific exports from test fixtures, and never commit credentials, customer
+records, or production audit results. A release handoff should include the
+source revision, Python version, locked verification dependencies, and the
+verification commands shown below.
 
 ## Outputs
 - **JSON**: `output files/json/AS400/extracted_data_*.json`
