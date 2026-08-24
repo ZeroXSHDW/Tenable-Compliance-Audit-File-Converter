@@ -27,6 +27,11 @@ class TestAuditParseSmoke(unittest.TestCase):
         self.assertIn("git diff --check", readme)
         self.assertIn("pip_audit -r requirements.txt", readme)
         self.assertIn("pip_audit -r requirements.txt", workflow)
+        self.assertIn("runs-on: ubuntu-24.04", workflow)
+        self.assertNotIn("runs-on: ubuntu-latest", workflow)
+        self.assertNotIn("pip install --upgrade pip", workflow)
+        self.assertNotIn("pip install --upgrade pip setuptools wheel", workflow)
+        self.assertIn('pip install --disable-pip-version-check "pip-audit==2.9.0"', workflow)
         self.assertEqual(
             workflow.count("git diff --check"),
             workflow.count("uses: actions/checkout@"),
