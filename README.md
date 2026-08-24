@@ -19,6 +19,7 @@ Converts Tenable Compliance Audit Files (`audits.tar.gz` from [Tenable](https://
 
 ## Prerequisites
 - Python 3.11+
+- CI and reproducible verification use the checked-in Python 3.12 pin in `.python-version`.
 - Tenable `audits.tar.gz`
 
 ## Setup
@@ -125,13 +126,20 @@ runs the fixture-backed parser/conversion tests. Run the same checks locally
 with:
 
 ```bash
-python3 -m pip install -r requirements.txt
+python3 -m pip install --require-hashes -r requirements-ci.txt
 python3 -m pip check
-python3 -m pip install pip-audit
-python3 -m pip_audit -r requirements.txt --progress-spinner off
+python3 -m pip_audit -r requirements-ci.txt --progress-spinner off
 python3 -m py_compile execute_all_scripts.py data_extract_to_json.py audit_extract_helper.py audit_parse_detector.py generate_status_log.py audit_utils/__init__.py
 python3 -m unittest tests.test_audit_parse_smoke -v
 git diff --check
+```
+
+`requirements-ci.txt` is generated from `requirements-ci.in` for Python 3.12 and
+contains hashes for the runtime and verification graph. Regenerate it only when
+reviewing a deliberate dependency update:
+
+```bash
+uv pip compile requirements-ci.in --python-version 3.12 --universal --generate-hashes --output-file requirements-ci.txt
 ```
 
 ## License
