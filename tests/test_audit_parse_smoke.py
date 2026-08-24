@@ -28,6 +28,12 @@ class TestAuditParseSmoke(unittest.TestCase):
         runtime_pin = root.joinpath(".python-version").read_text(encoding="utf-8").strip()
         ci_lock = root.joinpath("requirements-ci.txt").read_text(encoding="utf-8")
         self.assertIn("git diff --check", readme)
+
+        self.assertIn("## Architecture", readme)
+        self.assertIn("## Distribution and data handling", readme)
+        self.assertIn("local, deterministic batch pipeline", readme)
+        self.assertIn("does not upload Tenable archives", readme)
+        self.assertIn("Atomic output replacement", readme)
         self.assertIn("bash ./install_requirements.sh", readme)
         self.assertNotIn("\n   ./install_requirements.sh", readme)
         self.assertIn("pip_audit -r requirements-ci.txt", readme)
