@@ -11,8 +11,6 @@
 
 # Tenable Compliance Audit File Converter
 
-> **Private repository.** Owner: [ZeroXSHDW](https://github.com/ZeroXSHDW).
-
 **[Tenable Compliance Audit File Converter](https://ZeroDevLLC.com)** by [ZeroDev LLC](https://ZeroDevLLC.com) · GitHub: [ZeroXSHDW/Tenable-Compliance-Audit-File-Converter](https://github.com/ZeroXSHDW/Tenable-Compliance-Audit-File-Converter)
 
 > Brand: **[https://ZeroDevLLC.com](https://ZeroDevLLC.com)** · Store: **[https://zerodevllc.store](https://zerodevllc.store)**  
