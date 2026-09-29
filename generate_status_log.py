@@ -87,9 +87,23 @@ def generate_status(output_dir: str, config: dict, logger: logging.Logger) -> No
                     logger.error(f"Failed to process XLSX file {xlsx_file}: {str(e)}")
                     f.write(f"ERROR - Invalid XLSX file {xlsx_file}: {str(e)}\n")
             
+            json_row_total = 0
+            for jf in json_files:
+                if not validate_json_file(jf, logger):
+                    continue
+                with open(jf, 'r', encoding='utf-8') as jf_handle:
+                    json_row_total += len(json.load(jf_handle))
+            xlsx_row_total = 0
+            if xlsx_files:
+                import openpyxl
+            for xf in xlsx_files:
+                if not os.path.exists(xf):
+                    continue
+                wb = openpyxl.load_workbook(xf)
+                xlsx_row_total += sum(1 for _ in wb.active.rows) - 1
             f.write(f"Summary - JSON Files: {len(json_files)}, XLSX Files: {len(xlsx_files)}, "
-                    f"Valid Data Rows (json): {sum(len(json.load(open(jf, 'r', encoding='utf-8'))) for jf in json_files if validate_json_file(jf, logger))}, "
-                    f"Valid Data Rows (xlsx): {sum(sum(1 for _ in openpyxl.load_workbook(xf).active.rows) - 1 for xf in xlsx_files if os.path.exists(xf))}\n")
+                    f"Valid Data Rows (json): {json_row_total}, "
+                    f"Valid Data Rows (xlsx): {xlsx_row_total}\n")
         
         logger.info(f"Status log appended to {log_file}")
     
